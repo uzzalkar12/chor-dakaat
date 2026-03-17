@@ -13,18 +13,16 @@ Route::post('/register', [AuthController::class, 'register'])->name('register.po
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Game routes (authenticated)
-Route::prefix('games')->group(function () {
-    Route::middleware('auth')->group(function () {
-        Route::get('/lobby', [GameController::class, 'lobby'])->name('lobby');
-        Route::post('/room/create', [GameController::class, 'createRoom'])->name('room.create');
-        Route::post('/room/join', [GameController::class, 'joinRoom'])->name('room.join');
-        Route::get('/room/{roomCode}', [GameController::class, 'room'])->name('game.room');
+Route::middleware('auth')->group(function () {
+    Route::get('/lobby', [GameController::class, 'lobby'])->name('lobby');
+    Route::post('/room/create', [GameController::class, 'createRoom'])->name('room.create');
+    Route::post('/room/join', [GameController::class, 'joinRoom'])->name('room.join');
+    Route::get('/room/{roomCode}', [GameController::class, 'room'])->name('game.room');
 
-        // API endpoints
-        Route::post('/api/room/{roomCode}/start', [GameController::class, 'startGame'])->name('api.game.start');
-        Route::post('/api/room/{roomCode}/guess', [GameController::class, 'policeGuess'])->name('api.game.guess');
-        Route::post('/api/room/{roomCode}/next-round', [GameController::class, 'nextRound'])->name('api.game.next');
-        Route::post('/api/room/{roomCode}/leave', [GameController::class, 'leaveRoom'])->name('api.game.leave');
-        Route::get('/api/room/{roomCode}/state', [GameController::class, 'roomState'])->name('api.game.state');
-    });
+    // API endpoints
+    Route::post('/api/room/{roomCode}/start', [GameController::class, 'startGame'])->name('api.game.start');
+    Route::post('/api/room/{roomCode}/guess', [GameController::class, 'policeGuess'])->name('api.game.guess');
+    Route::post('/api/room/{roomCode}/next-round', [GameController::class, 'nextRound'])->name('api.game.next');
+    Route::post('/api/room/{roomCode}/leave', [GameController::class, 'leaveRoom'])->name('api.game.leave');
+    Route::get('/api/room/{roomCode}/state', [GameController::class, 'roomState'])->name('api.game.state');
 });
