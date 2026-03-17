@@ -644,8 +644,41 @@ channel.listen('.game.finished', (data) => {
 // ===== HELPERS =====
 
 function copyCode(code) {
-    navigator.clipboard.writeText(code).then(() => showToast('✅ কোড কপি হয়েছে!', 'success'));
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(() => {
+            showToast('✅ কোড কপি হয়েছে!', 'success');
+        }).catch(() => {
+            // Fallback if writing to clipboard fails for some reason
+            fallbackCopy(code);
+        });
+    } else {
+        fallbackCopy(code);
+    }
 }
+
+function fallbackCopy(code) {
+    const textArea = document.createElement("textarea");
+    textArea.value = code;
+    // Hide textarea and add to document
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showToast('✅ কোড কপি হয়েছে!', 'success');
+        } else {
+            showToast('❌ কপি করা সম্ভব হয়নি', 'error');
+        }
+    } catch (err) {
+        showToast('❌ কপি করা সম্ভব হয়নি', 'error');
+    }
+    document.body.removeChild(textArea);
+}
+
 
 // Fix 3: set/unset online dot without page reload
 function setOnlineDot(userId, online) {
