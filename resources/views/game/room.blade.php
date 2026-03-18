@@ -276,6 +276,40 @@
 .pulse-icon { font-size: 2.5rem; animation: pulse 1.5s infinite; }
 @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
 
+/* ── Police timer ── */
+#policeTimer { display:inline-flex; align-items:center; gap:0.3rem; }
+#policeTimer.urgent { background:rgba(230,57,70,0.2)!important; color:var(--accent-red)!important; border-color:rgba(230,57,70,0.4)!important; animation:timerPulse 0.5s infinite; }
+@keyframes timerPulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+/* ── Progress dot types ── */
+.progress-dot.current-chor   { background: var(--accent-red)!important; box-shadow:0 0 8px var(--accent-red); }
+.progress-dot.current-daakat { background: #c77dff!important; box-shadow:0 0 8px #c77dff; }
+
+/* ── Trophy celebration overlay ── */
+#trophyOverlay {
+    position:fixed; inset:0; z-index:9000;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+}
+.trophy-float {
+    font-size:8rem;
+    animation: trophyIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both,
+               trophyOut 1s 9s ease-in forwards;
+    filter: drop-shadow(0 0 40px rgba(244,165,34,0.8));
+}
+.trophy-winner-text {
+    position:absolute; bottom:-3rem; left:50%; transform:translateX(-50%);
+    white-space:nowrap;
+    font-family:'Tiro Bangla',serif;
+    font-size:1.4rem; font-weight:700;
+    color:var(--accent-gold);
+    text-shadow:0 2px 20px rgba(244,165,34,0.6);
+    animation: trophyIn 0.6s 0.2s cubic-bezier(0.34,1.56,0.64,1) both,
+               trophyOut 1s 9s ease-in forwards;
+}
+@keyframes trophyIn  { from{opacity:0;transform:scale(0.3) translateY(60px)} to{opacity:1;transform:scale(1) translateY(0)} }
+@keyframes trophyOut { from{opacity:1} to{opacity:0;transform:scale(1.2) translateY(-40px)} }
+
 /* ===== ROUND RESULT ===== */
 .round-result { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 2rem; }
 .result-banner {
@@ -452,21 +486,25 @@
 <script src="https://cdn.jsdelivr.net/npm/pusher-js@8.4.0/dist/web/pusher.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.15.3/dist/echo.iife.js"></script>
 <script>
-// ===== REVERB SETUP =====
-// Reverb uses the Pusher protocol — broadcaster must be 'pusher'
-// The IIFE build of laravel-echo does NOT ship a 'reverb' connector;
-// use 'pusher' broadcaster pointed at the Reverb WS server instead.
+@php
+    $reverbScheme = env('REVERB_SCHEME', 'http');
+    $isSecure     = $reverbScheme === 'https';
+    $reverbHost   = env('REVERB_HOST', '127.0.0.1');
+    $reverbPort   = (int) env('REVERB_PORT', 8080);
+    $wsPort       = $isSecure ? 443 : $reverbPort;
+    $wssPort      = $isSecure ? 443 : $reverbPort;
+@endphp
 const echo = new Echo({
-    broadcaster: 'pusher',
-    key: '{{ config("reverb.apps.apps.0.key", env("REVERB_APP_KEY", "app-key")) }}',
-    wsHost: '{{ env("REVERB_HOST", "127.0.0.1") }}',
-    wsPort: {{ env("REVERB_PORT", 8080) }},
-    wssPort: {{ env("REVERB_PORT", 8080) }},
-    cluster: 'mt1',           // required by Pusher.js but ignored by Reverb
-    forceTLS: false,
-    disableStats: true,
-    enabledTransports: ['ws'],
-    authEndpoint: '/broadcasting/auth',
+    broadcaster:       'pusher',
+    key:               '{{ env("REVERB_APP_KEY", "app-key") }}',
+    wsHost:            '{{ $reverbHost }}',
+    wsPort:            {{ $wsPort }},
+    wssPort:           {{ $wssPort }},
+    cluster:           'mt1',
+    forceTLS:          {{ $isSecure ? 'true' : 'false' }},
+    disableStats:      true,
+    enabledTransports: ['{{ $isSecure ? "wss" : "ws" }}'],
+    authEndpoint:      '/broadcasting/auth',
 });
 
 // ===== PRESENCE CHANNEL =====
@@ -633,10 +671,6 @@ channel.listen('.round.started', (data) => {
     renderMyRolePhase(round, data.room_status);
 });
 
-channel.listen('.round.completed', (data) => {
-    renderRoundResult(data.round, data.scores);
-});
-
 channel.listen('.game.finished', (data) => {
     renderGameFinished(data);
 });
@@ -644,41 +678,8 @@ channel.listen('.game.finished', (data) => {
 // ===== HELPERS =====
 
 function copyCode(code) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(code).then(() => {
-            showToast('✅ কোড কপি হয়েছে!', 'success');
-        }).catch(() => {
-            // Fallback if writing to clipboard fails for some reason
-            fallbackCopy(code);
-        });
-    } else {
-        fallbackCopy(code);
-    }
+    navigator.clipboard.writeText(code).then(() => showToast('✅ কোড কপি হয়েছে!', 'success'));
 }
-
-function fallbackCopy(code) {
-    const textArea = document.createElement("textarea");
-    textArea.value = code;
-    // Hide textarea and add to document
-    textArea.style.position = "fixed";
-    textArea.style.left = "-9999px";
-    textArea.style.top = "0";
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    try {
-        const successful = document.execCommand('copy');
-        if (successful) {
-            showToast('✅ কোড কপি হয়েছে!', 'success');
-        } else {
-            showToast('❌ কপি করা সম্ভব হয়নি', 'error');
-        }
-    } catch (err) {
-        showToast('❌ কপি করা সম্ভব হয়নি', 'error');
-    }
-    document.body.removeChild(textArea);
-}
-
 
 // Fix 3: set/unset online dot without page reload
 function setOnlineDot(userId, online) {
@@ -698,8 +699,13 @@ function updateProgressDots(current) {
         const dot = document.getElementById(`dot-${i}`);
         if (!dot) continue;
         dot.className = 'progress-dot';
-        if (i < current)  dot.classList.add(i % 2 !== 0 ? 'done-chor' : 'done-daakat');
-        if (i === current) dot.classList.add('current');
+        // odd rounds = chor, even rounds = daakat
+        if (i < current)   dot.classList.add(i % 2 !== 0 ? 'done-chor' : 'done-daakat');
+        if (i === current) {
+            dot.classList.add('current');
+            // also colour current dot per its type
+            dot.classList.add(current % 2 !== 0 ? 'current-chor' : 'current-daakat');
+        }
     }
 }
 
@@ -763,19 +769,39 @@ function renderMyRolePhase(round, roomStatus) {
         const grid = buildGuessGrid(round.assignments, roomStatus.players, typeBn);
         bottomSection = `
             <div class="police-section" style="margin-top:1rem">
-                <h3>👮 ${typeBn}কে চিহ্নিত করুন</h3>
+                <h3>👮 ${typeBn}কে চিহ্নিত করুন
+                    <span id="policeTimer"
+                          style="margin-left:auto;font-size:1rem;padding:0.3rem 0.9rem;
+                                 border-radius:20px;background:rgba(244,165,34,0.15);
+                                 color:var(--accent-gold);border:1px solid rgba(244,165,34,0.3);">
+                        ⏱ <span id="timerCount">15</span>s
+                    </span>
+                </h3>
                 <p style="color:var(--text-muted);font-size:0.9rem">
                     কে ${typeBn}? বাবু ছাড়া যেকোনো খেলোয়াড়কে সিলেক্ট করুন:
                 </p>
                 <div class="guess-grid">${grid}</div>
             </div>`;
+        // Start 15s countdown — auto-forfeit on timeout
+        startPoliceTimer(round.assignments);
     } else {
+        // Show who the police is to non-police players
+        const policeAssignment = round.assignments.find(a => a.role === 'police');
+        const policeName = policeAssignment
+            ? (roomStatus.players.find(p => p.user_id == policeAssignment.user_id)?.name || '?')
+            : '?';
         bottomSection = `
             <div class="police-section" style="margin-top:1rem;border-color:var(--border)">
                 <div class="waiting-police">
                     <div class="pulse-icon">👮</div>
-                    <p style="margin-top:0.8rem;font-size:1rem">পুলিশ সিদ্ধান্ত নিচ্ছেন...</p>
-                    <p style="color:var(--text-muted);font-size:0.85rem;margin-top:0.3rem">অপেক্ষা করুন</p>
+                    <p style="margin-top:0.8rem;font-size:1.1rem;font-weight:600;color:var(--accent-blue)">
+                        পুলিশ: ${policeName}
+                    </p>
+                    <p style="color:var(--text-muted);font-size:0.85rem;margin-top:0.4rem">সিদ্ধান্তের অপেক্ষায়...</p>
+                    <div id="policeTimerDisplay" style="margin-top:0.8rem;font-size:1.5rem;font-weight:700;color:var(--accent-gold)">
+                        15
+                    </div>
+                    <p style="color:var(--text-muted);font-size:0.75rem">সেকেন্ড বাকি</p>
                 </div>
             </div>`;
     }
@@ -835,6 +861,8 @@ function renderRoundResult(round, scores) {
 
 function renderGameFinished(data) {
     document.getElementById('roundHeader').style.display = 'none';
+    // Fix 4: floating trophy for 10 seconds
+    if (data.winner?.name) showTrophyCelebration(data.winner.name);
 
     const rows = data.results.map((r, i) => {
         const rank = i + 1;
@@ -893,6 +921,73 @@ async function startNextRound(btn) {
         showToast(data.message || 'ত্রুটি হয়েছে', 'error');
         if (btn) { btn.disabled = false; btn.textContent = '▶️ পরবর্তী রাউন্ড'; }
     }
+}
+
+// ─── Fix 5: Police 15-second countdown ───────────────────────────────────────
+let policeTimerInterval = null;
+
+function startPoliceTimer(assignments) {
+    clearPoliceTimer(); // clear any old timer
+    let remaining = 15;
+
+    policeTimerInterval = setInterval(async () => {
+        remaining--;
+        const countEl = document.getElementById('timerCount');
+        if (countEl) {
+            countEl.textContent = remaining;
+            if (remaining <= 5) {
+                document.getElementById('policeTimer')?.classList.add('urgent');
+            }
+        }
+        // Also update non-police viewer timer
+        const viewerEl = document.getElementById('policeTimerDisplay');
+        if (viewerEl) {
+            viewerEl.textContent = remaining;
+            if (remaining <= 5) viewerEl.style.color = 'var(--accent-red)';
+        }
+
+        if (remaining <= 0) {
+            clearPoliceTimer();
+            // Time up — police auto-forfeits (submit with user_id = 0 = no guess)
+            document.querySelectorAll('.guess-btn:not(.babu-btn)').forEach(b => b.disabled = true);
+            showToast('⏰ সময় শেষ! পুলিশ পয়েন্ট পাবে না।', 'error', 4000);
+            const data = await apiPost(`/api/room/${ROOM_CODE}/guess`, { guess_user_id: 0 });
+            if (!data.success && data.message !== 'ইনভ্যালিড') {
+                // server handles 0 as timeout forfeit — if fails just broadcast nothing
+            }
+        }
+    }, 1000);
+}
+
+function clearPoliceTimer() {
+    if (policeTimerInterval) {
+        clearInterval(policeTimerInterval);
+        policeTimerInterval = null;
+    }
+}
+
+// Clear timer when round completes
+channel.listen('.round.completed', (data) => {
+    clearPoliceTimer();
+    renderRoundResult(data.round, data.scores);
+});
+
+// ─── Fix 4: Trophy floating celebration on game finish ────────────────────────
+function showTrophyCelebration(winnerName) {
+    // Remove old overlay if any
+    document.getElementById('trophyOverlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'trophyOverlay';
+    overlay.innerHTML = `
+        <div style="position:relative;text-align:center">
+            <div class="trophy-float">🏆</div>
+            <div class="trophy-winner-text">${winnerName} বিজয়ী!</div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    // Remove after 10 seconds
+    setTimeout(() => overlay.remove(), 10000);
 }
 
 // Fix 2: leave room

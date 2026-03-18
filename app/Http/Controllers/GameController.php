@@ -29,7 +29,7 @@ class GameController extends Controller
     public function createRoom(Request $request)
     {
         $request->validate([
-            'total_rounds' => 'integer|min:2|max:20',
+            'total_rounds' => 'integer|min:6|max:20',
         ]);
 
         $room = $this->gameService->createRoom(
@@ -103,7 +103,7 @@ class GameController extends Controller
      */
     public function policeGuess(Request $request, string $roomCode)
     {
-        $request->validate(['guess_user_id' => 'required|integer|exists:users,id']);
+        $request->validate(['guess_user_id' => 'required|integer|min:0']); // 0 = timeout forfeit
 
         $room = GameRoom::where('room_code', $roomCode)->firstOrFail();
         $currentRound = GameRound::where('game_room_id', $room->id)

@@ -123,7 +123,7 @@
             <div class="form-group">
                 <label class="form-label">মোট রাউন্ড</label>
                 <div class="round-selector" id="roundSelector">
-                    @foreach([4,6,8,10] as $r)
+                    @foreach([6,10,15,20] as $r)
                         <button type="button" class="round-btn {{ $r==6?'active':'' }}"
                             onclick="selectRounds({{ $r }}, this)">{{ $r }}</button>
                     @endforeach

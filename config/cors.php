@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'https://34a0-182-160-100-210.ngrok-free.app'],
 
     'allowed_methods' => ['*'],
 

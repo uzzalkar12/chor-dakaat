@@ -214,6 +214,27 @@ class GameService
             return ['success' => false, 'message' => 'এখন অনুমান করার সময় নয়।'];
         }
 
+        // guess_user_id = 0 means police timed out — force forfeit
+        if ($guessUserId === 0) {
+            $policeAssignment = $round->assignments()
+                ->where('user_id', $policeUserId)
+                ->where('role', 'police')
+                ->first();
+            if (!$policeAssignment) {
+                return ['success' => false, 'message' => 'আপনি পুলিশ নন।'];
+            }
+            // Police gets 0 — treat as wrong guess (guess a non-existent user)
+            $round->update([
+                'police_guess_user_id' => null,
+                'police_correct'       => false,
+                'status'               => 'completed',
+            ]);
+            $this->calculateRoundPoints($round, false, $policeAssignment, $round->round_type);
+            $round->load('assignments.user');
+            broadcast(new RoundCompleted($round->gameRoom, $round));
+            return ['success' => true, 'correct' => false, 'timeout' => true, 'round' => $round];
+        }
+
         // Verify this user is actually police
         $policeAssignment = $round->assignments()
             ->where('user_id', $policeUserId)

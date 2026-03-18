@@ -194,3 +194,6 @@ http://localhost:8000
 - php artisan serve
 - php artisan reverb:start
 - php artisan queue:work
+
+
+- ngrok start --all
