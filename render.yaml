@@ -1,5 +1,5 @@
 services:
-  # 1. Main Application (Web + Queue Combined)
+  # 1. Main Web Application (nginx + php-fpm + queue worker bundled)
   - type: web
     name: chor-dakaat-prod
     runtime: docker
@@ -7,12 +7,16 @@ services:
     envVars:
       - key: SERVICE_TYPE
         value: web
+      - key: AUTORUN_ENABLED
+        value: "false"          # We handle migrations ourselves in entrypoint.sh
+      - key: PHP_OPCACHE_ENABLE
+        value: "1"
       - fromGroup: chor-dakaat-configs
       - key: DATABASE_URL
         fromDatabase:
           name: chor-dakaat-db-resource
           property: connectionString
-      - key: VITE_REVERB_HOST # Required for Vite during Docker build
+      - key: VITE_REVERB_HOST
         fromService:
           type: web
           name: chor-dakaat-reverb
@@ -26,6 +30,8 @@ services:
     envVars:
       - key: SERVICE_TYPE
         value: reverb
+      - key: AUTORUN_ENABLED
+        value: "false"
       - fromGroup: chor-dakaat-configs
       - key: DATABASE_URL
         fromDatabase:
@@ -37,7 +43,7 @@ services:
           name: chor-dakaat-reverb
           property: host
 
-# Shared variables for all services
+# Shared environment variables
 envVarGroups:
   - name: chor-dakaat-configs
     envVars:
@@ -45,6 +51,8 @@ envVarGroups:
         generateValue: true
       - key: APP_ENV
         value: production
+      - key: APP_URL
+        sync: false             # Set this manually in Render dashboard after first deploy
       - key: DB_CONNECTION
         value: pgsql
       - key: QUEUE_CONNECTION
@@ -52,17 +60,23 @@ envVarGroups:
       - key: BROADCAST_CONNECTION
         value: reverb
       - key: REVERB_APP_ID
-        value: "chor-dakaat-app" # Use the ID from your .env
+        value: "chor-dakaat-app"
       - key: REVERB_APP_KEY
-        value: "chor-dakaat-key" # Use the Key from your .env
+        value: "chor-dakaat-key"
       - key: REVERB_APP_SECRET
-        value: "chor-dakaat-secret" # Render will create a secure secret for you
+        value: "chor-dakaat-secret"
       - key: REVERB_SCHEME
         value: https
       - key: REVERB_PORT
-        value: 443
+        value: "443"
+      - key: VITE_REVERB_APP_KEY
+        value: "chor-dakaat-key"
+      - key: VITE_REVERB_SCHEME
+        value: https
+      - key: VITE_REVERB_PORT
+        value: "443"
 
-# The Database (Expires every 30 days on Free Tier!)
+# Database
 databases:
   - name: chor-dakaat-db-resource
     databaseName: chor_dakaat_prod_db
