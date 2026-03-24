@@ -1,16 +1,17 @@
-FROM serversideup/php:8.2-fpm-nginx
+FROM serversideup/php:8.3-fpm-nginx
 
-# Set working directory
 WORKDIR /var/www/html
-
-# Copy project files
 COPY --chown=www-data:www-data . .
 
-# Install dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Compile assets
+# --- ADD THESE LINES SO VITE WORKS ---
+ARG VITE_REVERB_HOST
+ARG VITE_REVERB_APP_KEY
+ARG VITE_REVERB_SCHEME
+ARG VITE_REVERB_PORT
+# -------------------------------------
+
 RUN npm install && npm run build
 
-# Set permissions
 RUN chmod -R 775 storage bootstrap/cache

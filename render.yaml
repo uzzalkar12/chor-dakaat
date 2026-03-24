@@ -2,22 +2,38 @@ services:
   # 1. The Main Web Application
   - type: web
     name: chor-dakaat-prod
-    runtime: docker # Changed to docker
+    runtime: docker
     plan: free
     preDeployCommand: php artisan migrate --force
-    startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
     envVars:
       - key: APP_ENV
         value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: chor-dakaat-db-resource
+          property: connectionString
       - fromGroup: chor-dakaat-configs
+      # Vite Build Args
+      - key: VITE_REVERB_HOST
+        fromService:
+          type: web
+          name: chor-dakaat-reverb
+          property: host
+      - key: VITE_REVERB_APP_KEY
+        value: "your_reverb_key"
 
   # 2. Reverb (WebSocket Server)
   - type: web
     name: chor-dakaat-reverb
-    runtime: docker # Changed to docker
+    runtime: docker
     plan: free
     startCommand: php artisan reverb:start --host=0.0.0.0 --port=$PORT
     envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: chor-dakaat-db-resource
+          property: connectionString
+      - fromGroup: chor-dakaat-configs
       - key: REVERB_SERVER_HOST
         value: 0.0.0.0
       - key: REVERB_HOST
@@ -25,18 +41,21 @@ services:
           type: web
           name: chor-dakaat-reverb
           property: host
-      - fromGroup: chor-dakaat-configs
 
   # 3. Queue Worker
   - type: worker
     name: chor-dakaat-queue
-    runtime: docker # Changed to docker
+    runtime: docker
     plan: free
     startCommand: php artisan queue:work --tries=3 --timeout=90
     envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: chor-dakaat-db-resource
+          property: connectionString
       - fromGroup: chor-dakaat-configs
 
-# 4. Shared Environment Variables
+# 4. Shared Environment Variables (Constants only)
 envVarGroups:
   - name: chor-dakaat-configs
     envVars:
@@ -44,14 +63,16 @@ envVarGroups:
         generateValue: true
       - key: DB_CONNECTION
         value: pgsql
-      - key: DATABASE_URL
-        fromDatabase:
-          name: chor-dakaat-db-resource
-          property: connectionString
       - key: QUEUE_CONNECTION
         value: database
       - key: BROADCAST_CONNECTION
         value: reverb
+      - key: REVERB_APP_ID
+        value: "chor-dakaat-app"
+      - key: REVERB_APP_KEY
+        value: "chor-dakaat-key"
+      - key: REVERB_APP_SECRET
+        value: "chor-dakaat-secret"
       - key: REVERB_SCHEME
         value: https
       - key: REVERB_PORT
