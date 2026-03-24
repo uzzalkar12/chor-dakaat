@@ -1,0 +1,65 @@
+services:
+  # 1. The Main Web Application
+  - type: web
+    name: chor-dakaat-prod
+    runtime: docker # Changed to docker
+    plan: free
+    preDeployCommand: php artisan migrate --force
+    startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
+    envVars:
+      - key: APP_ENV
+        value: production
+      - fromGroup: chor-dakaat-configs
+
+  # 2. Reverb (WebSocket Server)
+  - type: web
+    name: chor-dakaat-reverb
+    runtime: docker # Changed to docker
+    plan: free
+    startCommand: php artisan reverb:start --host=0.0.0.0 --port=$PORT
+    envVars:
+      - key: REVERB_SERVER_HOST
+        value: 0.0.0.0
+      - key: REVERB_HOST
+        fromService:
+          type: web
+          name: chor-dakaat-reverb
+          property: host
+      - fromGroup: chor-dakaat-configs
+
+  # 3. Queue Worker
+  - type: worker
+    name: chor-dakaat-queue
+    runtime: docker # Changed to docker
+    plan: free
+    startCommand: php artisan queue:work --tries=3 --timeout=90
+    envVars:
+      - fromGroup: chor-dakaat-configs
+
+# 4. Shared Environment Variables
+envVarGroups:
+  - name: chor-dakaat-configs
+    envVars:
+      - key: APP_KEY
+        generateValue: true
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DATABASE_URL
+        fromDatabase:
+          name: chor-dakaat-db-resource
+          property: connectionString
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: BROADCAST_CONNECTION
+        value: reverb
+      - key: REVERB_SCHEME
+        value: https
+      - key: REVERB_PORT
+        value: 443
+
+# 5. The Database
+databases:
+  - name: chor-dakaat-db-resource
+    databaseName: chor_dakaat_prod_db
+    user: chor_dakaat_prod_db_user
+    plan: free
