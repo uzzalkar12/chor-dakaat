@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Fix permissions at runtime just in case
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
 # This entrypoint is only called by the Reverb service container.
 # The web service uses the image's native S6/AUTORUN system instead.
 
