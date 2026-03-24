@@ -15,3 +15,8 @@ ARG VITE_REVERB_PORT
 RUN npm install && npm run build
 
 RUN chmod -R 775 storage bootstrap/cache
+
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["entrypoint.sh"]
