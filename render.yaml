@@ -1,5 +1,5 @@
 services:
-  # 1. Web Application AND Queue Worker (Combined)
+  # 1. Main Application (Web + Queue Combined)
   - type: web
     name: chor-dakaat-prod
     runtime: docker
@@ -12,8 +12,13 @@ services:
         fromDatabase:
           name: chor-dakaat-db-resource
           property: connectionString
+      - key: VITE_REVERB_HOST # Required for Vite during Docker build
+        fromService:
+          type: web
+          name: chor-dakaat-reverb
+          property: host
 
-  # 2. Reverb Server
+  # 2. Reverb WebSocket Server
   - type: web
     name: chor-dakaat-reverb
     runtime: docker
@@ -26,24 +31,38 @@ services:
         fromDatabase:
           name: chor-dakaat-db-resource
           property: connectionString
+      - key: REVERB_HOST
+        fromService:
+          type: web
+          name: chor-dakaat-reverb
+          property: host
 
-# Shared config and Database blocks remain exactly as before...
+# Shared variables for all services
 envVarGroups:
   - name: chor-dakaat-configs
     envVars:
       - key: APP_KEY
         generateValue: true
+      - key: APP_ENV
+        value: production
       - key: DB_CONNECTION
         value: pgsql
       - key: QUEUE_CONNECTION
         value: database
       - key: BROADCAST_CONNECTION
         value: reverb
+      - key: REVERB_APP_ID
+        value: "chor-dakaat-app" # Use the ID from your .env
+      - key: REVERB_APP_KEY
+        value: "chor-dakaat-key" # Use the Key from your .env
+      - key: REVERB_APP_SECRET
+        value: "chor-dakaat-secret" # Render will create a secure secret for you
       - key: REVERB_SCHEME
         value: https
       - key: REVERB_PORT
         value: 443
 
+# The Database (Expires every 30 days on Free Tier!)
 databases:
   - name: chor-dakaat-db-resource
     databaseName: chor_dakaat_prod_db
