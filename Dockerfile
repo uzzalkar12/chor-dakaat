@@ -1,6 +1,6 @@
 FROM serversideup/php:8.2-fpm-nginx
 
-# Switch to root for install steps
+# Switch to root for system-level installs
 USER root
 
 # Install Node.js 20 LTS
@@ -21,18 +21,17 @@ ARG VITE_REVERB_APP_KEY
 ARG VITE_REVERB_SCHEME=https
 ARG VITE_REVERB_PORT=443
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader
+# Install PHP & Node dependencies, build frontend assets
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN npm install && npm run build && rm -rf node_modules
 
-# Install Node dependencies and build assets
-RUN npm install && npm run build
+# Fix storage and cache permissions so www-data can write at runtime
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Clean up node_modules after build (saves image space)
-RUN rm -rf node_modules
+# Copy the reverb startup script — used ONLY by the reverb service
+# This is a standalone script, NOT placed in entrypoint.d
+COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
 
-# Copy startup script into entrypoint.d so it runs before nginx/php-fpm starts
-# The image executes scripts in /etc/entrypoint.d alphabetically
-COPY --chmod=755 etc/entrypoint.sh /etc/entrypoint.d/99-laravel-startup.sh
-
-# Drop back to unprivileged user
+# Drop back to non-root
 USER www-data

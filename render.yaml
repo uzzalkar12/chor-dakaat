@@ -1,5 +1,5 @@
 services:
-  # 1. Main Web Application (nginx + php-fpm + queue worker bundled)
+  # 1. Main Web Application
   - type: web
     name: chor-dakaat-prod
     runtime: docker
@@ -7,10 +7,24 @@ services:
     envVars:
       - key: SERVICE_TYPE
         value: web
+      # Tell the image to run migrations, optimize, and storage:link automatically
       - key: AUTORUN_ENABLED
-        value: "false"          # We handle migrations ourselves in entrypoint.sh
+        value: "true"
+      - key: AUTORUN_LARAVEL_MIGRATION
+        value: "true"
+      - key: AUTORUN_LARAVEL_STORAGE_LINK
+        value: "true"
+      - key: AUTORUN_LARAVEL_CONFIG_CACHE
+        value: "true"
+      - key: AUTORUN_LARAVEL_ROUTE_CACHE
+        value: "true"
+      - key: AUTORUN_LARAVEL_VIEW_CACHE
+        value: "true"
       - key: PHP_OPCACHE_ENABLE
         value: "1"
+      # The image listens on 8080 internally — tell Render to use it
+      - key: PORT
+        value: "8080"
       - fromGroup: chor-dakaat-configs
       - key: DATABASE_URL
         fromDatabase:
@@ -27,11 +41,11 @@ services:
     name: chor-dakaat-reverb
     runtime: docker
     plan: free
+    # Override the default image entrypoint with our custom reverb script
+    dockerCommand: /usr/local/bin/entrypoint.sh
     envVars:
       - key: SERVICE_TYPE
         value: reverb
-      - key: AUTORUN_ENABLED
-        value: "false"
       - fromGroup: chor-dakaat-configs
       - key: DATABASE_URL
         fromDatabase:
@@ -52,7 +66,7 @@ envVarGroups:
       - key: APP_ENV
         value: production
       - key: APP_URL
-        sync: false             # Set this manually in Render dashboard after first deploy
+        sync: false   # Set manually in Render dashboard after first deploy
       - key: DB_CONNECTION
         value: pgsql
       - key: QUEUE_CONNECTION
