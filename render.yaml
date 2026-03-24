@@ -1,5 +1,5 @@
 services:
-  # 1. Web Application
+  # 1. Web Application AND Queue Worker (Combined)
   - type: web
     name: chor-dakaat-prod
     runtime: docker
@@ -27,21 +27,7 @@ services:
           name: chor-dakaat-db-resource
           property: connectionString
 
-  # 3. Queue Worker
-  - type: worker
-    name: chor-dakaat-queue
-    runtime: docker
-    plan: free
-    envVars:
-      - key: SERVICE_TYPE
-        value: queue
-      - fromGroup: chor-dakaat-configs
-      - key: DATABASE_URL
-        fromDatabase:
-          name: chor-dakaat-db-resource
-          property: connectionString
-
-# (envVarGroups and databases blocks remain the same as previous)
+# Shared config and Database blocks remain exactly as before...
 envVarGroups:
   - name: chor-dakaat-configs
     envVars:

@@ -1,14 +1,16 @@
 #!/bin/bash
 
+# Run migrations (only once)
+php artisan migrate --force
+
 if [ "$SERVICE_TYPE" = "reverb" ]; then
     echo "Starting Reverb..."
     php artisan reverb:start --host=0.0.0.0 --port=$PORT
-elif [ "$SERVICE_TYPE" = "queue" ]; then
-    echo "Starting Queue Worker..."
-    php artisan queue:work --tries=3 --timeout=90
 else
-    echo "Starting Web Server..."
-    # We run migrations here manually since pre-deploy is disabled
-    php artisan migrate --force
+    echo "Starting Web + Queue..."
+    # Start the queue worker in the background
+    php artisan queue:work --tries=3 --timeout=90 &
+
+    # Start the web server in the foreground
     php artisan serve --host=0.0.0.0 --port=$PORT
 fi
