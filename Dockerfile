@@ -8,8 +8,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install required PHP extensions for PostgreSQL + other common Laravel deps
-RUN install-php-extensions pdo_pgsql pgsql redis bcmath
+# Install common Laravel + PostgreSQL PHP extensions
+RUN install-php-extensions pdo_pgsql pgsql redis bcmath pcntl zip exif
 
 WORKDIR /var/www/html
 
@@ -20,7 +20,9 @@ ARG VITE_REVERB_APP_KEY
 ARG VITE_REVERB_SCHEME=https
 ARG VITE_REVERB_PORT=443
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# --verbose so Render logs show the REAL error
+RUN composer install --no-dev --optimize-autoloader --no-interaction --verbose
+
 RUN npm install && npm run build && rm -rf node_modules
 
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
